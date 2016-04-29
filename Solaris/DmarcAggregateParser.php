@@ -11,9 +11,9 @@ class DmarcAggregateParser {
 	private $ready = false;
 	private $errors = array();
 
-	function __construct( $db_host, $db_user, $db_pass, $db_name ) {
+	function __construct( $dbtype = 'mysql', $db_host, $db_user, $db_pass, $db_name) {
 		try {
-			$this->dbh = new \PDO( "mysql:host=$db_host;dbname=$db_name", $db_user, $db_pass );
+			$this->dbh = new \PDO( "$dbtype:host=$db_host;dbname=$db_name", $db_user, $db_pass );
 		}
 		catch( PDOException $e ) {
 			$this->errors[] = 'Failed to establish database connection.';
@@ -76,7 +76,11 @@ class DmarcAggregateParser {
 			}
 
 			try {
-				$sth = $this->dbh->prepare( "INSERT INTO report(date_begin, date_end, domain, org, report_id) VALUES (FROM_UNIXTIME(:date_begin),FROM_UNIXTIME(:date_end), :domain, :org, :id)" );
+				if($this->$dbtype = 'mysql') {
+					$sth = $this->dbh->prepare( "INSERT INTO report(date_begin, date_end, domain, org, report_id) VALUES (FROM_UNIXTIME(:date_begin),FROM_UNIXTIME(:date_end), :domain, :org, :id)" );
+				elseif($this->$dbtype = 'pgsql') {
+					$sth = $this->dbh->prepare( "INSERT INTO report(date_begin, date_end, domain, org, report_id) VALUES (to_timestamp(:date_begin),to_timestamp(:date_end), :domain, :org, :id)" );
+				}
 				$sth->execute( array( 'date_begin' => $date_begin, 'date_end' => $date_end, 'domain' => $domain, 'org' => $org, 'id' => $id ) );
 			}
 			catch( PDOException $e ) {
