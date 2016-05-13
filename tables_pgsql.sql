@@ -16,6 +16,7 @@ CREATE TYPE dkimtype AS ENUM('none','pass','fail','neutral','policy','temperror'
 CREATE TYPE spftype AS ENUM('none','neutral','pass','fail','softfail','temperror','permerror');
 
 CREATE TABLE rptrecord (
+  id serial NOT NULL,
   "serial" integer NOT NULL,
   ip varchar(39) NOT NULL,
   count integer NOT NULL,
@@ -25,5 +26,8 @@ CREATE TABLE rptrecord (
   dkim_result dkimtype,
   spf_domain varchar(255),
   spf_result spftype,
-  PRIMARY KEY ("serial", ip)
+  PRIMARY KEY(id)
 );
+
+CREATE INDEX rptrecord_serial_ip_idx ON rptrecord ("serial", ip);
+

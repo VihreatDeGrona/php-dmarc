@@ -7,13 +7,15 @@
 namespace Solaris;
 
 class DmarcAggregateParser {
+	private $dbtype;
 	private $dbh;
 	private $ready = false;
 	private $errors = array();
 
-	function __construct( $dbtype = 'mysql', $db_host, $db_user, $db_pass, $db_name) {
+	function __construct($db_type, $db_host, $db_port, $db_user, $db_pass, $db_name) {
+		$this->dbtype = $db_type;
 		try {
-			$this->dbh = new \PDO( "$dbtype:host=$db_host;dbname=$db_name", $db_user, $db_pass );
+			$this->dbh = new \PDO( "$db_type:host=$db_host;port=$db_port;dbname=$db_name", $db_user, $db_pass );
 		}
 		catch( PDOException $e ) {
 			$this->errors[] = 'Failed to establish database connection.';
@@ -76,10 +78,15 @@ class DmarcAggregateParser {
 			}
 
 			try {
-				if($this->$dbtype = 'mysql') {
+				if($this->dbtype == 'mysql') {
 					$sth = $this->dbh->prepare( "INSERT INTO report(date_begin, date_end, domain, org, report_id) VALUES (FROM_UNIXTIME(:date_begin),FROM_UNIXTIME(:date_end), :domain, :org, :id)" );
-				elseif($this->$dbtype = 'pgsql') {
+				}
+				elseif($this->dbtype == 'pgsql') {
 					$sth = $this->dbh->prepare( "INSERT INTO report(date_begin, date_end, domain, org, report_id) VALUES (to_timestamp(:date_begin),to_timestamp(:date_end), :domain, :org, :id)" );
+				}
+				else {
+					$this->errors[] = "Unsupported DB type!";
+					break;
 				}
 				$sth->execute( array( 'date_begin' => $date_begin, 'date_end' => $date_end, 'domain' => $domain, 'org' => $org, 'id' => $id ) );
 			}
@@ -88,7 +95,17 @@ class DmarcAggregateParser {
 				continue;
 			}
 
-			$serial = $this->dbh->lastInsertId();
+			$serial = FALSE;
+			if($this->dbtype == 'mysql') {
+				$serial = $this->dbh->lastInsertId();
+			}
+			elseif($this->dbtype == 'pgsql') {
+				$serial = $this->dbh->lastInsertId('report_serial_seq');
+			}
+			else {
+				$this->errors[] = "Unsupported DB type!";
+				break;
+			}
 
 			// parse records
 			foreach( $xml->record as $record ) {
